@@ -1,5 +1,2 @@
-Plaintext
-
-
 requests
 beautifulsoup4
