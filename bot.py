@@ -4,8 +4,8 @@ from playwright.sync_api import sync_playwright
 
 WEBHOOK_URL = os.getenv("DISCORD_WEBHOOK_URL")
 
-def scrape_live_codes():
-    print("Launching Chromium browser to scrape live codes...")
+def scrape_official_daily_passwords():
+    print("Launching browser to scrape playdeltaforce.com...")
     try:
         with sync_playwright() as p:
             browser = p.chromium.launch(
@@ -13,43 +13,46 @@ def scrape_live_codes():
                 args=["--no-sandbox", "--disable-setuid-sandbox"]
             )
             context = browser.new_context(
+                viewport={"width": 1920, "height": 1080},
                 user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
             )
             page = context.new_page()
             
-            # Go to website
-            page.goto("https://deltaforcetools.gg/", wait_until="domcontentloaded", timeout=45000)
-            page.wait_for_timeout(5000)  # Wait 5 seconds for JS daily codes to render
+            # Go directly to the official HQ page
+            page.goto("https://www.playdeltaforce.com/events/hq/en/", wait_until="networkidle", timeout=45000)
+            page.wait_for_timeout(5000)  # Wait 5 seconds for dynamic JS rendering
 
+            # Read all body text
             body_text = page.inner_text("body")
             browser.close()
 
             lines = [line.strip() for line in body_text.split("\n") if line.strip()]
             
-            maps = ["Dam", "Layali Grove", "Brakkesh", "Space City", "Tide Prison", "AZ3"]
+            maps = ["Zero Dam", "Layali Grove", "Brakkesh", "Space City", "Tide Prison", "AZ3"]
             scraped_results = []
 
+            # Search text line-by-line for Map names and corresponding 4-digit passwords
             for i, line in enumerate(lines):
                 for map_name in maps:
                     if map_name.lower() in line.lower():
-                        # Search adjacent lines for 4-digit daily code
-                        for offset in range(1, 4):
+                        # Search nearby lines for the 4-digit code
+                        for offset in range(1, 5):
                             if i + offset < len(lines):
-                                val = lines[i + offset]
-                                if val.isdigit() and len(val) == 4:
+                                potential_code = lines[i + offset]
+                                if potential_code.isdigit() and len(potential_code) == 4:
                                     if not any(item['name'] == map_name for item in scraped_results):
-                                        scraped_results.append({"name": map_name, "code": val})
+                                        scraped_results.append({"name": map_name, "code": potential_code})
                                     break
 
             if scraped_results:
-                print(f"SCRAPE SUCCESSFUL: {scraped_results}")
+                print(f"SUCCESSFULLY SCRAPED OFFICIAL PASSWORDS: {scraped_results}")
                 return scraped_results
             else:
-                print("Could not parse 4-digit codes from page text.")
+                print("Could not locate passwords in extracted text.")
                 return None
 
     except Exception as e:
-        print(f"Scraping failed with error: {e}")
+        print(f"Scraping official site failed: {e}")
         return None
 
 def main():
@@ -57,34 +60,34 @@ def main():
         print("CRITICAL ERROR: DISCORD_WEBHOOK_URL secret is missing!")
         exit(1)
 
-    # 1. Scrape live data dynamically
-    codes_data = scrape_live_codes()
+    # Scrape from official site
+    codes_data = scrape_official_daily_passwords()
 
     if not codes_data:
-        print("Scraper failed to pull live codes!")
+        print("Scraper failed to pull daily passwords from official site!")
         exit(1)
 
-    # 2. Build Discord Message with Header formatting
+    # Format into large text headers
     formatted_description = ""
     for item in codes_data:
         formatted_description += f"📍 **{item['name']}**\n# `{item['code']}`\n\n"
 
     embed = {
-        "title": "🔑 Delta Force - Daily Door Codes",
-        "url": "https://deltaforcetools.gg/",
+        "title": "🔑 Delta Force - Daily Passwords",
+        "url": "https://www.playdeltaforce.com/events/hq/en/",
         "color": 3066993,
         "description": formatted_description,
-        "footer": {"text": "Live data scraped directly from deltaforcetools.gg"}
+        "footer": {"text": "Official data scraped directly from playdeltaforce.com"}
     }
 
     payload = {
-        "username": "Delta Force Tools Bot",
+        "username": "Delta Force HQ Bot",
         "embeds": [embed]
     }
 
     response = requests.post(WEBHOOK_URL, json=payload)
     if response.status_code in [200, 204]:
-        print("SUCCESS: Live codes posted to Discord!")
+        print("SUCCESS: Official passwords posted to Discord!")
     else:
         print(f"FAILED: Status {response.status_code}: {response.text}")
         exit(1)
