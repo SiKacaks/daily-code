@@ -2,7 +2,6 @@ name: Daily Delta Force Codes Posting
 
 on:
   schedule:
-    # Runs at 10:00 AM GMT+8 (02:00 UTC) every day
     - cron: '0 1 * * *'
   workflow_dispatch:
 
