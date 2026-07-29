@@ -81,7 +81,7 @@ def main():
     }
 
     payload = {
-        "username": "Delta Force HQ Bot",
+        "username": "Daily Code Doors Bot",
         "embeds": [embed]
     }
 
